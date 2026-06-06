@@ -1,0 +1,12 @@
+# downloaded ffmpeg binaries (fetched on first run)
+bin/
+
+# working directories
+uploads/
+out/
+
+# python / os cruft
+__pycache__/
+*.pyc
+.DS_Store
+server.log

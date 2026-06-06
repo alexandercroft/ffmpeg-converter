@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FFMPEG // FORMAT CONVERTER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#dededa;--panel:#ecece8;--panel-2:#f4f4f1;--ink:#0c0c0d;--ink-2:#2a2a2c;
+    --muted:#8b8b85;--muted-2:#a7a7a1;--line:#c7c7c1;--red:#e61919;--tape:#0c0c0e;
+    --mono:'JetBrains Mono',monospace;--tech:'Chakra Petch',sans-serif;--sp:'Space Mono',monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:var(--mono);background:var(--bg);color:var(--ink);
+    -webkit-font-smoothing:antialiased;min-height:100vh;position:relative;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:52px 52px;opacity:.22;mask-image:radial-gradient(ellipse 95% 80% at 50% 45%,#000 50%,transparent 100%)}
+  body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:repeating-linear-gradient(135deg,rgba(0,0,0,.04) 0 2px,transparent 2px 8px);
+    mask-image:radial-gradient(ellipse 120% 100% at 50% 50%,transparent 62%,#000 100%);opacity:.55}
+  .grain{position:fixed;inset:0;pointer-events:none;z-index:60;opacity:.045;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:160px;mix-blend-mode:multiply}
+  .vframe{position:fixed;inset:14px;pointer-events:none;z-index:40}
+  .vframe i{position:absolute;width:24px;height:24px;border:2px solid var(--ink)}
+  .vframe i.tl{top:0;left:0;border-right:0;border-bottom:0}
+  .vframe i.tr{top:0;right:0;border-left:0;border-bottom:0}
+  .vframe i.bl{bottom:0;left:0;border-right:0;border-top:0}
+  .vframe i.br{bottom:0;right:0;border-left:0;border-top:0}
+  .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:28px 38px 80px}
+  .topbar{display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:9px}
+  .topbar b{color:var(--ink);font-weight:700}
+  .topbar .sp{margin-left:auto}
+  .blink{width:7px;height:7px;background:var(--red);display:inline-block;animation:blink 1.3s steps(1) infinite}
+  @keyframes blink{50%{opacity:.15}}
+  .brand{display:flex;align-items:center;gap:16px;margin-top:30px}
+  .mark{width:54px;height:54px;flex:none;border:2px solid var(--ink);display:flex;align-items:center;justify-content:center;
+    font-family:var(--tech);font-weight:700;font-size:13px;letter-spacing:.02em;background:var(--ink);color:var(--bg);line-height:.95;text-align:center}
+  .bk .name{font-family:var(--tech);font-size:30px;font-weight:700;line-height:1;letter-spacing:.04em;text-transform:uppercase}
+  .bk .name .dot{color:var(--red)}
+  .bk .desc{font-family:var(--mono);font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);margin-top:7px}
+
+  .hero{padding-top:8vh}
+  .seclabel{font-family:var(--mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink);margin-bottom:10px}
+  .seclabel .sl{color:var(--red);font-weight:700;margin-right:6px}
+
+  .presets{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+  .chip{font-family:var(--mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+    border:1px solid var(--line);padding:7px 14px;background:var(--panel-2);cursor:pointer;transition:.2s}
+  .chip:hover{color:var(--ink);border-color:var(--ink)}
+  .chip.on{color:#fff;background:var(--red);border-color:var(--red)}
+
+  .drop{display:block;width:100%;border:1.5px solid var(--ink);background:var(--panel);position:relative;
+    padding:46px 20px;text-align:center;cursor:pointer;transition:background .2s}
+  .drop::before{content:'[ INPUT // DROP FILES ]';position:absolute;top:-9px;left:18px;background:var(--bg);
+    font-family:var(--mono);font-size:10px;letter-spacing:.2em;color:var(--ink);padding:0 8px;text-transform:uppercase}
+  .drop:hover,.drop.over{background:var(--panel-2)}
+  .drop.over{outline:2px dashed var(--red);outline-offset:-8px}
+  .drop .big{font-family:var(--tech);font-weight:600;font-size:18px;letter-spacing:.02em}
+  .drop .small{font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin-top:8px}
+  input[type=file]{display:none}
+
+  .qsection{margin-top:26px;display:none}
+  .qsection.show{display:block}
+  .secthead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .secthead .h{font-family:var(--tech);font-weight:600;font-size:12px;letter-spacing:.22em;text-transform:uppercase}
+  .secthead .h .sl{color:var(--red);font-weight:700;margin-right:8px}
+  .secthead .meta{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase}
+
+  .qcard{border:1.5px solid var(--ink);background:var(--panel);margin-bottom:14px;animation:slide .4s cubic-bezier(.16,1,.3,1)}
+  @keyframes slide{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .qhead{display:flex;align-items:center;gap:12px;padding:13px 16px}
+  .qhead .tag{font-family:var(--mono);font-size:9px;letter-spacing:.12em;background:var(--red);color:#fff;padding:3px 7px;text-transform:uppercase;flex:none}
+  .qhead .ttl{font-family:var(--tech);font-weight:600;font-size:15px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .qhead .ji{margin-left:auto;font-family:var(--sp);font-size:10px;color:var(--muted);letter-spacing:.08em;white-space:nowrap;flex:none}
+  .tape{background:var(--tape);border-top:1.5px solid var(--ink);padding:14px 16px 12px;position:relative;overflow:hidden}
+  .tape::after{content:'';position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,transparent 0 2px,rgba(255,255,255,.025) 2px 3px)}
+  .tape-top{display:flex;align-items:center;gap:10px;margin-bottom:13px;position:relative;z-index:1}
+  .tape-top .erc{font-family:var(--tech);font-weight:700;font-size:12px;letter-spacing:.04em;color:#0c0c0e;background:#fff;padding:3px 8px;text-transform:uppercase}
+  .tape-top .cap{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:#c9c9c4;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tape-top .cap.err{color:#ff6b6b}
+  .tape-top .pct{margin-left:auto;font-family:var(--sp);font-weight:700;font-size:15px;color:#fff;letter-spacing:.03em}
+  .stripes{position:relative;z-index:1;height:46px;display:flex;justify-content:space-between;align-items:center;overflow:hidden}
+  .stripes .s{width:9px;height:165%;flex:none;transform:skewX(-20deg);background:#2b2b30;
+    transition:background .3s cubic-bezier(.32,.72,0,1),box-shadow .3s,filter .3s}
+  .stripes .s.fill{background:#ededea}
+  .stripes .s.g3{background:#fafafa;box-shadow:0 0 8px 2px rgba(255,255,255,.32)}
+  .stripes .s.g2{background:#fff;box-shadow:0 0 13px 3px rgba(255,255,255,.6)}
+  .stripes .s.lead{background:#fff;box-shadow:0 0 18px 5px rgba(255,255,255,.95),0 0 36px 13px rgba(255,255,255,.5);filter:blur(.2px)}
+  .tape-foot{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:8.5px;letter-spacing:.1em;color:#67675f;text-transform:uppercase;margin-top:11px;position:relative;z-index:1;white-space:nowrap;overflow:hidden}
+  .tape-foot .dl{margin-left:auto;font-family:var(--tech);font-weight:600;font-size:10px;letter-spacing:.12em;
+    color:#0c0c0e;background:#ededea;padding:5px 12px;text-decoration:none;text-transform:uppercase;transition:.2s}
+  .tape-foot .dl:hover{background:#fff}
+
+  .footrow{display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:14px;flex-wrap:wrap}
+  .outpath{font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--ink-2);word-break:break-all}
+  .outpath .k{color:var(--muted);text-transform:uppercase;letter-spacing:.16em;font-size:10px;margin-right:8px}
+  .finder{font-family:var(--tech);font-weight:600;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;
+    border:1.5px solid var(--ink);background:transparent;color:var(--ink);padding:8px 16px;cursor:pointer;
+    display:flex;align-items:center;gap:8px;transition:.25s cubic-bezier(.32,.72,0,1);flex:none}
+  .finder:hover{background:var(--ink);color:var(--bg)}
+  @media(max-width:560px){.wrap{padding:24px 22px 70px}.bk .name{font-size:24px}}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<div class="vframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+
+<div class="wrap">
+  <div class="topbar">
+    <span class="blink"></span> <b>SYS/ONLINE</b> <span>LOCAL · 127.0.0.1:8000</span>
+    <span class="sp">FFMPEG ENGINE</span>
+  </div>
+
+  <div class="brand">
+    <div class="mark">FF<br>MPG</div>
+    <div class="bk">
+      <div class="name">FFMPEG<span class="dot">.</span></div>
+      <div class="desc">UNIVERSAL FORMAT CONVERTER</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="seclabel"><span class="sl">///</span> TARGET FORMAT</div>
+    <div class="presets" id="presets"></div>
+
+    <label class="drop" id="drop">
+      <div class="big">Перетащи файлы сюда</div>
+      <div class="small">или нажми · вход — что угодно · можно несколько</div>
+      <input type="file" id="file" multiple>
+    </label>
+  </div>
+
+  <div class="qsection" id="qsection">
+    <div class="secthead">
+      <div class="h"><span class="sl">///</span> CONVERSION QUEUE</div>
+      <div class="meta" id="qmeta">00 ACTIVE</div>
+    </div>
+    <div id="queue"></div>
+    <div class="footrow">
+      <div class="outpath"><span class="k">OUTPUT</span> …/Scripts/ffmpeg/out</div>
+      <button class="finder" id="revealLast">▣ REVEAL IN FINDER</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const N = 20;
+let preset = null;
+// preferred display order + nicer labels; only those the server reports are shown
+const PRESET_ORDER = ["prores","h264","hevc","mp3","wav"];
+const PRESET_LABELS = {prores:"ProRes 422 HQ",h264:"H.264 · MOV",hevc:"H.265 / HEVC",mp3:"→ MP3",wav:"→ WAV"};
+const presetsEl = document.getElementById("presets");
+const drop = document.getElementById("drop");
+const fileInput = document.getElementById("file");
+const queueEl = document.getElementById("queue");
+const qsection = document.getElementById("qsection");
+const qmeta = document.getElementById("qmeta");
+const cards = [];
+let lastOutput = null;
+
+presetsEl.addEventListener("click", e=>{
+  const el=e.target.closest(".chip"); if(!el) return;
+  document.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
+  el.classList.add("on"); preset=el.dataset.p;
+});
+
+async function loadPresets(){
+  let avail={};
+  try{ avail=await (await fetch('/api/presets')).json(); }catch{}
+  const ids=PRESET_ORDER.filter(id=>id in avail);
+  if(!ids.length){ // fallback if endpoint unavailable
+    PRESET_ORDER.forEach(id=>avail[id]=id); ids.push(...PRESET_ORDER);
+  }
+  presetsEl.innerHTML='';
+  ids.forEach((id,i)=>{
+    const c=document.createElement('span');
+    c.className='chip'+(i===0?' on':''); c.dataset.p=id;
+    c.textContent=PRESET_LABELS[id]||avail[id];
+    presetsEl.appendChild(c);
+  });
+  preset=ids[0];
+}
+loadPresets();
+
+fileInput.addEventListener("change",()=>{handle([...fileInput.files]);fileInput.value="";});
+["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("over");}));
+["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("over");}));
+drop.addEventListener("drop",e=>handle([...e.dataTransfer.files]));
+document.getElementById("revealLast").addEventListener("click",reveal);
+
+function esc(s){const d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML;}
+
+function makeCard(card){
+  const el=document.createElement('div');
+  el.className='qcard';
+  el.innerHTML=`
+    <div class="qhead">
+      <span class="tag">${esc(card.label)}</span>
+      <span class="ttl">${esc(card.name)}</span>
+      <span class="ji">JOB#${(card.jobId||'······').toUpperCase()}</span>
+    </div>
+    <div class="tape">
+      <div class="tape-top">
+        <span class="erc">FFM.</span>
+        <span class="cap">CAUTION // UPLOADING</span>
+        <span class="pct">···</span>
+      </div>
+      <div class="stripes">${'<div class="s"></div>'.repeat(N)}</div>
+      <div class="tape-foot"><span class="ft">— · ${esc(card.label)} TAPE</span></div>
+    </div>`;
+  queueEl.prepend(el);
+  card.el=el;
+  card.stripeEls=[...el.querySelectorAll('.s')];
+  card.jiEl=el.querySelector('.ji');
+  card.capEl=el.querySelector('.cap');
+  card.pctEl=el.querySelector('.pct');
+  card.ftEl=el.querySelector('.ft');
+  card.footEl=el.querySelector('.tape-foot');
+}
+
+function paint(card){
+  card.jiEl.textContent='JOB#'+(card.jobId||'······').toUpperCase();
+  if(card.status==='error'){
+    card.capEl.classList.add('err');
+    card.capEl.textContent='ERROR // '+String(card.error||'FAILED').split('\n').pop();
+    card.pctEl.textContent='!!';
+    card.stripeEls.forEach(s=>s.className='s');
+    card.ftEl.textContent='FAILED · '+card.label+' TAPE';
+    return;
+  }
+  if(card.status==='done'){
+    card.capEl.classList.remove('err');
+    card.capEl.textContent='TAPE COMPLETE';
+    card.pctEl.textContent='100%';
+    card.stripeEls.forEach(s=>{s.className='s fill';});
+    card.ftEl.textContent=(card.size||'')+' · '+card.label+' TAPE';
+    if(card.url && !card.footEl.querySelector('.dl')){
+      const a=document.createElement('a');
+      a.className='dl';a.href=card.url;a.setAttribute('download','');a.textContent='↓ DOWNLOAD';
+      card.footEl.appendChild(a);
+    }
+    return;
+  }
+  // working
+  if(card.progress==null){
+    card.capEl.textContent = card.uploaded ? 'CAUTION // CONVERTING' : 'CAUTION // UPLOADING';
+    card.pctEl.textContent='···';
+  }else{
+    card.capEl.textContent='CAUTION // WRITING TAPE';
+    card.pctEl.textContent=card.progress+'%';
+    const lead=Math.round(card.progress/100*N);
+    card.stripeEls.forEach((c,i)=>{c.className='s';
+      if(i>lead-1)return;c.classList.add('fill');
+      const d=lead-1-i;if(d===0)c.classList.add('lead');else if(d===1)c.classList.add('g2');else if(d===2)c.classList.add('g3');});
+  }
+}
+
+// indeterminate sweep for working/no-percent cards
+let phase=0;
+setInterval(()=>{
+  phase++;
+  cards.forEach(card=>{
+    if(card.status==='working' && card.progress==null && card.stripeEls){
+      const lead=phase%(N+6);
+      card.stripeEls.forEach((c,i)=>{c.className='s';
+        const d=lead-i;
+        if(d>=0&&d<=2){c.classList.add('fill');
+          if(d===0)c.classList.add('lead');else if(d===1)c.classList.add('g2');else c.classList.add('g3');}});
+    }
+  });
+},120);
+
+function updateMeta(){
+  const active=cards.filter(c=>c.status==='working').length;
+  qmeta.textContent=String(active).padStart(2,'0')+' ACTIVE · '+String(cards.length).padStart(2,'0')+' TOTAL';
+}
+
+async function handle(files){ for(const f of files) startOne(f); }
+
+async function startOne(file){
+  const card={jobId:null,name:file.name,label:document.querySelector('.chip.on').textContent.trim(),
+              status:'working',progress:null,uploaded:false};
+  cards.push(card);
+  qsection.classList.add('show');
+  makeCard(card); paint(card); updateMeta();
+  try{
+    const url=`/api/convert?name=${encodeURIComponent(file.name)}&preset=${preset}`;
+    const res=await fetch(url,{method:'POST',body:file});
+    const data=await res.json();
+    if(data.error){card.status='error';card.error=data.error;paint(card);updateMeta();return;}
+    card.jobId=data.job_id; card.uploaded=true; paint(card);
+    poll(card);
+  }catch(e){card.status='error';card.error='upload failed';paint(card);updateMeta();}
+}
+
+function poll(card){
+  const iv=setInterval(async ()=>{
+    try{
+      const r=await fetch('/api/status/'+card.jobId);
+      const d=await r.json();
+      card.status=d.status; card.progress=d.progress;
+      card.size=d.size; card.url=d.url; card.error=d.error;
+      paint(card); updateMeta();
+      if(d.status==='done'){lastOutput=d.output;clearInterval(iv);}
+      else if(d.status==='error'){clearInterval(iv);}
+    }catch{clearInterval(iv);card.status='error';card.error='lost server';paint(card);}
+  },500);
+}
+
+async function reveal(){
+  await fetch('/api/reveal',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({output:lastOutput||''})});
+}
+</script>
+</body>
+</html>
