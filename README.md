@@ -1,5 +1,7 @@
 # FFMPEG // Converter
 
+<p align="center"><img src="assets/preview.png" alt="FFMPEG Converter interface" width="860"></p>
+
 A tiny local web app that converts **any** media file into **MOV** (ProRes / H.264 /
 H.265) or extracts audio (MP3 / WAV) — with a live "magnetic-tape" progress bar.
 Runs at `http://localhost:8000`, drag-and-drop, no cloud, no upload anywhere.

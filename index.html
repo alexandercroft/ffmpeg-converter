@@ -32,6 +32,7 @@
   .vframe i.tr{top:0;right:0;border-left:0;border-bottom:0}
   .vframe i.bl{bottom:0;left:0;border-right:0;border-top:0}
   .vframe i.br{bottom:0;right:0;border-left:0;border-top:0}
+  .credit{position:fixed;right:45px;bottom:22px;z-index:41;font-size:8.5px;letter-spacing:.08em;color:var(--muted);text-transform:lowercase}
   .wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;padding:28px 38px 80px}
   .topbar{display:flex;align-items:center;gap:18px;font-family:var(--mono);font-size:10px;letter-spacing:.2em;
     text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--line);padding-bottom:9px}
@@ -111,6 +112,7 @@
 <body>
 <div class="grain"></div>
 <div class="vframe"><i class="tl"></i><i class="tr"></i><i class="bl"></i><i class="br"></i></div>
+<div class="credit">/ assembled by alexandercroft</div>
 
 <div class="wrap">
   <div class="topbar">
@@ -318,6 +320,35 @@ async function reveal(){
   await fetch('/api/reveal',{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({output:lastOutput||''})});
 }
+
+// ---- нативный режим (pywebview): файл по пути, без загрузки и лимита ----
+function startOneLocal(path){
+  const name=path.split('/').pop();
+  const card={jobId:null,name,label:document.querySelector('.chip.on').textContent.trim(),
+              status:'working',progress:null,uploaded:true};
+  cards.push(card);
+  qsection.classList.add('show');
+  makeCard(card); paint(card); updateMeta();
+  fetch(`/api/convert_local?path=${encodeURIComponent(path)}&preset=${preset}`,{method:'POST'})
+    .then(r=>r.json()).then(data=>{
+      if(data.error){card.status='error';card.error=data.error;paint(card);updateMeta();return;}
+      card.jobId=data.job_id; paint(card); poll(card);
+    }).catch(()=>{card.status='error';card.error='convert failed';paint(card);updateMeta();});
+}
+async function nativePick(){
+  try{
+    const paths=await window.pywebview.api.pick_files();
+    if(paths&&paths.length){for(const p of paths) startOneLocal(p);}
+  }catch(e){}
+}
+function enableNative(){
+  const big=drop.querySelector('.big'),small=drop.querySelector('.small');
+  if(big) big.textContent='Выбери файлы';
+  if(small) small.textContent='нативно · без загрузки · без лимита на размер';
+  drop.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();nativePick();},true);
+}
+if(window.pywebview&&window.pywebview.api) enableNative();
+else window.addEventListener('pywebviewready',enableNative);
 </script>
 </body>
 </html>
